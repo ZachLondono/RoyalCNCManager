@@ -1,0 +1,123 @@
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Data.OleDb;
+using System.Collections.Generic;
+using System.Runtime.Versioning;
+
+using RoyalCNCTrackerLib.Models;
+
+namespace RoyalCNCTrackerLib.DAL.MSAccess {
+
+	public class AccessTrackerDatabase : ITrackerDatabase {
+
+		private string _patternTableName = "Patterns";
+		private string _jobNameCol = "job";
+		private string _patternNameCol = "pattern";
+		private string _completeNameCol = "is_complete";
+		private string _source = "C:\\Users\\Zachary Londono\\Desktop\\TestJobs.accdb";
+
+		private AccessConnection _connection { get; set; }
+
+		public AccessTrackerDatabase(string source) {
+			string _connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={_source}";
+			_connection = new AccessConnection(_connectionString);
+		}
+
+		[SupportedOSPlatform("windows")]
+		public void MarkComplete(string patternName) {
+		
+			string query = $@"UPDATE {_patternTableName} SET {_completeNameCol} = yes WHERE pattern = '{patternName}'";
+
+			try {
+				int rows = _connection.ExecuteQuery(query);
+			} catch (Exception e) {
+				Debug.WriteLine("[Exception in AccessTrackerDatabase]" + e);
+			}
+			
+			_connection.Close();
+
+		}
+
+		[SupportedOSPlatform("windows")]
+		public bool GetPatternStatus(string patternName) {
+
+			string query = $"SELECT ({_completeNameCol}) FROM {_patternTableName} WHERE pattern = '{patternName}'";
+
+			bool patternExists = false;
+			bool patternComplete = false;
+			_connection.GetReaderFromDb(query, (reader) => {
+					if (!reader.HasRows) return;
+					patternExists = true;
+					reader.Read();
+					patternComplete = (bool) reader[_completeNameCol];
+				});
+
+			_connection.Close();
+
+			return patternExists & patternComplete;
+		}
+
+		[SupportedOSPlatform("windows")]
+		public void AddJob(Job job) {
+
+			if (job.Patterns is null || job.Patterns.Count() < 1) {
+				_connection.Close();
+				return;
+			}
+
+			for (int i = 0; i < job.Patterns.Count(); i++) {
+
+				Pattern pattern = job.Patterns.ElementAt(i);		
+				
+				string statusString  = pattern.IsComplete ? "yes" :"no"; 
+
+				string query = $@"INSERT INTO {_patternTableName} ({_jobNameCol}, {_patternNameCol}, {_completeNameCol}) 
+						VALUES ('{job.Name}', '{pattern.Name}', '{statusString}')";
+
+				_connection.ExecuteQuery(query);
+
+			}
+			
+			_connection.Close();
+
+		}
+
+		[SupportedOSPlatform("windows")]
+		public IEnumerable<Pattern> GetJobStatus(string jobName) {
+
+			string query = $"SELECT {_patternNameCol}, {_completeNameCol} FROM {_patternTableName} WHERE {_jobNameCol} = '{jobName}'";
+
+			List<Pattern> patterns = new List<Pattern>();	
+
+			bool jobExists = false;
+			_connection.GetReaderFromDb(query, (reader) => {
+					if (!reader.HasRows) return;
+					jobExists = true;
+
+					while (reader.Read()) {
+
+						Pattern pattern = new Pattern();
+						pattern.Name = reader[_patternNameCol].ToString();	
+						pattern.IsComplete = (bool) reader[_completeNameCol];
+			
+						patterns.Add(pattern);
+
+					}					
+
+				});
+
+			_connection.Close();
+
+			return jobExists ? patterns : null;
+		}
+
+		public SinglePart GetSinglePart(string programName) {
+			throw new NotImplementedException();
+		}
+
+	}
+
+}
+
+

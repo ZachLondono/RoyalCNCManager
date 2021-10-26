@@ -14,27 +14,39 @@ using RoyalCNCTrackerLib.DAL.Sqlite;
 using RoyalCNCTrackerLib.DAL.MSAccess;
 using RoyalCNCTrackerLib.Models;
 using System.Diagnostics;
+using Microsoft.Data.Sqlite;
+using System.Configuration;
+using System.IO;
 
 namespace RoyalCNCTracker {
 	public partial class MainForm : Form {
 
 		private readonly Processor processor;
+		private readonly SqliteConnection _connection;
 		private Image _originalCropped { get; set; }
 
 		public MainForm() {
 			InitializeComponent();
 
-			string patternPath = "C:\\Users\\Zachary Londono\\Desktop\\PATTERNS";
-			string imagePath = "Y:\\CADCode\\pix";
-			string barcodePath = "C:\\Users\\Zachary Londono\\Documents\\GitHub\\RoyalCNC\\CNCLibTests\\TestData\\CLindex.mdb";
-			string jobPath = "C:\\Users\\Zachary Londono\\Documents\\GitHub\\RoyalCNC\\CNCLibTests\\TestData\\tracker.db"; ;
+			string output = ConfigurationManager.AppSettings.Get("Output");
+			if (string.IsNullOrEmpty(output)) output = "C:\\Users\\Zachary Londono\\Desktop\\PATTERNS";
+			string source = ConfigurationManager.AppSettings.Get("Source");
+			if (string.IsNullOrEmpty(source)) source = "C:\\Users\\Zachary Londono\\Documents\\GitHub\\RoyalCNC\\CNCLibTests\\TestData\\CLindex.mdb";
+			string tracker = ConfigurationManager.AppSettings.Get("Data");
+			if (string.IsNullOrEmpty(tracker)) tracker = "Y:\\CADCode\\CNC Barcode Reader\\tracker.db";
+			string image = ConfigurationManager.AppSettings.Get("ImageSource");
+			if (string.IsNullOrEmpty(image)) image = "Y:\\CADCode\\pix"; 
+			string singles = ConfigurationManager.AppSettings.Get("SinglesSource");
+			if (string.IsNullOrEmpty(singles)) singles = "Y:\\CADCode\\CNC Programs\\Omnitech";
 
-			ICCRepository barcodeDb = new AccessCCRepository(barcodePath);
-			IJobRepository trackerDb = new SqliteJobRepository(jobPath);
-			IProgramRepository programDb = new SqliteProgramRepository(jobPath);
-			ILabelDBFactory labelDbFactory = new AccessLabelDBFactory(barcodeDb, imagePath, patternPath);
+			_connection = new SqliteConnection($"Data Source='{tracker}';");
 
-			processor = new Processor(patternPath, imagePath, barcodeDb, trackerDb, programDb, labelDbFactory);
+			ICCRepository barcodeDb = new AccessCCRepository(source);
+			ILabelDBFactory labelDbFactory = new AccessLabelDBFactory(barcodeDb, image, singles);
+			IJobRepository trackerDb = new SqliteJobRepository(_connection);
+			IProgramRepository programDb = new SqliteProgramRepository(_connection);
+
+			processor = new Processor(output, image, barcodeDb, trackerDb, programDb, labelDbFactory);
 
 		}
 
@@ -46,7 +58,13 @@ namespace RoyalCNCTracker {
 			if (e.KeyCode != Keys.Enter) return;
 
 			string input = BarcodeInput.Text;
-			SetCurrentProgram(input);
+
+			_connection.Open();
+			CADCodeProgram program = processor.GetCADCodeProgram(input);
+			_connection.Close();
+
+			SingleProgramList.Items.Clear();
+			SetCurrentProgram(program);
 
 		}
 		
@@ -59,7 +77,39 @@ namespace RoyalCNCTracker {
 			SingleProgramList.Items.Clear();
 			ProgramImageBox.Visible = false;
 
-			// TODO: clear output directory
+			try {
+
+				string output = ConfigurationManager.AppSettings.Get("Output");
+				if (string.IsNullOrEmpty(output))
+					throw new InvalidOperationException("Output directory is not set");
+
+				var files = Directory.EnumerateFiles(output, "*", SearchOption.TopDirectoryOnly);
+
+				if (files.Count() >= 10) {
+					var result = MessageBox.Show($"You are about to delete '{files.Count()}' files from\n'{output}'\n\nContinue?",
+												"File Delete Warning",
+												MessageBoxButtons.YesNo,
+												MessageBoxIcon.Warning);
+
+					if (result == DialogResult.No) return;	
+				}
+
+				foreach(var file in files) {
+					Debug.WriteLine($"Deleting file: '{file}'");
+					File.Delete(file);
+				}
+
+
+			} catch (Exception ex) {
+				var result = MessageBox.Show($"Error clearing directory\nShow error details?\n\n[{ex.Message}]",
+											"Unable to clear ouput directory",
+											MessageBoxButtons.YesNo,
+											MessageBoxIcon.Error);
+				if (result == DialogResult.Yes) {
+					MessageBox.Show(ex.ToString(), "Error Message");
+				}
+			}
+
 
 		}
 
@@ -72,25 +122,18 @@ namespace RoyalCNCTracker {
 
 			if (selected is null) return;
 
-			SetCurrentProgram(selected.ProgramName);
+			SetCurrentProgram(selected);
 
 		}
 
-		private void SetCurrentProgram(string programName) {
+		private void SetCurrentProgram(CADCodeProgram program) {
 
 			BarcodeInput.Clear();
-			SingleProgramList.Items.Clear();
 			ProgramImageBox.Visible = false;
 
-			CADCodeProgram program = processor.GetCADCodeProgram(programName);
 			string imagepath = program.ImageFile;
 
-			try {
-				SetPatternPicture(imagepath);
-			} catch (Exception ex) {
-				Debug.WriteLine("Error setting image\n" + ex.ToString());
-			}
-
+			bool crop = true;
 			if (program is PatternProgram) {
 
 				PatternProgram pattern = program as PatternProgram;
@@ -98,31 +141,46 @@ namespace RoyalCNCTracker {
 				foreach (CADCodeProgram component in pattern.GetComponents()) {
 					SingleProgramList.Items.Add(component);
 				}
+				crop = true;
+			} else {
+				processor.CopyProgramToLocal(program);
+				crop = false;
+			}
 
+
+			try {
+				SetPatternPicture(imagepath, crop);
+			} catch (Exception ex) {
+				Debug.WriteLine("Error setting image\n" + ex.ToString());
 			}
 
 		}
 
-		private void SetPatternPicture(string path) {
+		private void SetPatternPicture(string path, bool crop) {
 
-			Bitmap original = new Bitmap(path);
+			Bitmap image = new Bitmap(path);
 
-			// Scale the image based on the windows display scale settings
-			double graphicsScale = 96.0f / CreateGraphics().DpiX;
+			if (crop) {
+				// Scale the image based on the windows display scale settings
+				double graphicsScale = 96.0f / CreateGraphics().DpiX;
 
-			// Crop the image to get reid of all of the transparent space around the actual image
-			Rectangle cropRect = new Rectangle();
-			cropRect.Width = (int)(530.0f * 1 / graphicsScale);
-			cropRect.Height = (int)(1035.0f * 1 / graphicsScale);
+				// Crop the image to get reid of all of the transparent space around the actual image
+				Rectangle cropRect = new Rectangle();
+				cropRect.Width = (int)(530.0f * 1 / graphicsScale);
+				cropRect.Height = (int)(1035.0f * 1 / graphicsScale);
 
-			var cropped = original.Clone(cropRect, original.PixelFormat);
+				var cropped = image.Clone(cropRect, image.PixelFormat);
 
-			// Save the original image (after cropping) so that it can be scaled when window size changes
-			_originalCropped = cropped;
-			original.Dispose();
+				// Save the original image (after cropping) so that it can be scaled when window size changes
+				image = cropped;
+			}
 
+			_originalCropped = image;
+				
 			//PatternImage.SizeMode = PictureBoxSizeMode.Normal;
-			ProgramImageBox.Image = ScaleImageToPictureBox(cropped);
+			ProgramImageBox.Image = ScaleImageToPictureBox(image);
+
+			ProgramImageBox.Visible = true;
 
 		}
 
@@ -146,5 +204,11 @@ namespace RoyalCNCTracker {
 
 		}
 
+		private void settingsToolStripMenuItem_Click(object sender, EventArgs e) {
+
+			Settings settings = new Settings();
+			settings.Visible = true;
+
+		}
 	}
 }

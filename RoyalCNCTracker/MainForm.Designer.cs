@@ -29,7 +29,10 @@ namespace RoyalCNCTracker {
 			this.ProgramImageBox = new System.Windows.Forms.PictureBox();
 			this.ClearBtn = new System.Windows.Forms.Button();
 			this.LoadSingleBtn = new System.Windows.Forms.Button();
+			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+			this.settingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.ProgramImageBox)).BeginInit();
+			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// SingleProgramList
@@ -38,14 +41,14 @@ namespace RoyalCNCTracker {
             | System.Windows.Forms.AnchorStyles.Left)));
 			this.SingleProgramList.FormattingEnabled = true;
 			this.SingleProgramList.ItemHeight = 15;
-			this.SingleProgramList.Location = new System.Drawing.Point(13, 42);
+			this.SingleProgramList.Location = new System.Drawing.Point(13, 57);
 			this.SingleProgramList.Name = "SingleProgramList";
-			this.SingleProgramList.Size = new System.Drawing.Size(200, 274);
+			this.SingleProgramList.Size = new System.Drawing.Size(200, 259);
 			this.SingleProgramList.TabIndex = 0;
 			// 
 			// BarcodeInput
 			// 
-			this.BarcodeInput.Location = new System.Drawing.Point(13, 13);
+			this.BarcodeInput.Location = new System.Drawing.Point(14, 27);
 			this.BarcodeInput.Name = "BarcodeInput";
 			this.BarcodeInput.Size = new System.Drawing.Size(199, 23);
 			this.BarcodeInput.TabIndex = 1;
@@ -56,9 +59,9 @@ namespace RoyalCNCTracker {
 			this.ProgramImageBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.ProgramImageBox.Location = new System.Drawing.Point(219, 12);
+			this.ProgramImageBox.Location = new System.Drawing.Point(219, 27);
 			this.ProgramImageBox.Name = "ProgramImageBox";
-			this.ProgramImageBox.Size = new System.Drawing.Size(188, 370);
+			this.ProgramImageBox.Size = new System.Drawing.Size(188, 355);
 			this.ProgramImageBox.TabIndex = 2;
 			this.ProgramImageBox.TabStop = false;
 			// 
@@ -82,6 +85,23 @@ namespace RoyalCNCTracker {
 			this.LoadSingleBtn.UseVisualStyleBackColor = true;
 			this.LoadSingleBtn.Click += new System.EventHandler(this.LoadSingleBtn_Click);
 			// 
+			// menuStrip1
+			// 
+			this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.settingsToolStripMenuItem});
+			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+			this.menuStrip1.Name = "menuStrip1";
+			this.menuStrip1.Size = new System.Drawing.Size(419, 24);
+			this.menuStrip1.TabIndex = 5;
+			this.menuStrip1.Text = "menuStrip1";
+			// 
+			// settingsToolStripMenuItem
+			// 
+			this.settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
+			this.settingsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
+			this.settingsToolStripMenuItem.Text = "Settings";
+			this.settingsToolStripMenuItem.Click += new System.EventHandler(this.settingsToolStripMenuItem_Click);
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -92,9 +112,13 @@ namespace RoyalCNCTracker {
 			this.Controls.Add(this.ProgramImageBox);
 			this.Controls.Add(this.BarcodeInput);
 			this.Controls.Add(this.SingleProgramList);
+			this.Controls.Add(this.menuStrip1);
+			this.MainMenuStrip = this.menuStrip1;
 			this.Name = "MainForm";
 			this.Text = "MainForm";
 			((System.ComponentModel.ISupportInitialize)(this.ProgramImageBox)).EndInit();
+			this.menuStrip1.ResumeLayout(false);
+			this.menuStrip1.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
@@ -107,6 +131,8 @@ namespace RoyalCNCTracker {
 		private System.Windows.Forms.PictureBox ProgramImageBox;
 		private System.Windows.Forms.Button ClearBtn;
 		private System.Windows.Forms.Button LoadSingleBtn;
+		private System.Windows.Forms.MenuStrip menuStrip1;
+		private System.Windows.Forms.ToolStripMenuItem settingsToolStripMenuItem;
 	}
 }
 

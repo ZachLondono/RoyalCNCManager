@@ -75,13 +75,8 @@ namespace RoyalCNCTrackerLib {
 			while (patternEnum.MoveNext()) {
 				Pattern p = patternEnum.Current;
 
-				string newFilePath = _patternOutputPath + "\\" + p.Name;			
 				string oldFilePath = job.Path + "\\" + p.Name;
 
-				bool copied = CopyFile(oldFilePath, newFilePath);
-
-				if (!copied) Debug.WriteLine($"Failed to copy file '{oldFilePath}' to '{newFilePath}'");
-				
 				// TODO: create a CADCodeProgam for each pattern in the job, then write it to the tracker db
 				IEnumerable<SinglePart> subPrograms = labelDb.GetAllSubParts(job.DBName, p.Name);
 
@@ -89,10 +84,17 @@ namespace RoyalCNCTrackerLib {
 				newProgram.ProgramName = p.Name;
 				newProgram.JobDBName = job.DBName;
 				newProgram.ImageFile = GetImagePath(p.Name);
-				newProgram.GCodeFile = newFilePath;
+				newProgram.GCodeFile = oldFilePath;
 				newProgram.IsComplete = false;
+				newProgram.ParentId = -1;
 
 				newProgram = _programDb.Insert(newProgram);
+				
+				CopyProgramToLocal(newProgram);
+
+				foreach (SinglePart part in newProgram.GetComponents()) {
+					_programDb.Insert(part);
+				}
 
 				if (input == p.Name) program = newProgram;
 
@@ -100,6 +102,12 @@ namespace RoyalCNCTrackerLib {
 
 			return program;
 
+		}
+
+		public void CopyProgramToLocal(CADCodeProgram program) {
+			string newFilePath = _patternOutputPath + "\\" + program.ProgramName;
+			bool copied = CopyFile(program.GCodeFile, newFilePath);
+			if (!copied) Debug.WriteLine($"Failed to copy file '{program.GCodeFile}' to '{newFilePath}'");
 		}
 
 		// <summary>
@@ -128,7 +136,7 @@ namespace RoyalCNCTrackerLib {
 			// if it is not a full pattern, first check to see if the part is stored in the tracker database,
 			// otherwise, if the name of the program is a single part, then the files name is stored in the job's label database  
 
-			string filePath = _imagePath + "\\" + program;
+			string filePath = _imagePath + "\\" + program + ".wmf";
 
 			// First check if the program is a full pattern, simply by checking if the file exists
 			if (File.Exists(filePath)) 
@@ -138,16 +146,16 @@ namespace RoyalCNCTrackerLib {
 			CADCodeProgram part = _programDb.GetByName(program);
 			if (part is not null) return part.ImageFile;
 			
-			return null;
+			return "";
 
 			/*// If the file does not exists, we need to get the label database 
 			Job job = _ccBarcodeDb.GetJobFromPattern(program);
 			// if the program is not stored in the job database, there is no way to tell what job it belongs to
-			if (job is null) return null;
+			if (job is null) return "";
 			// If it is not in the CADCode barcode database, it may be a single part file
 			ILabelDatabase labelDb = _labelDbFactory.Create(job.LabelDBPath);
 			part = labelDb.GetSinglePart(job.DBName, program);
-			return part.ImageFile;	*/
+			return part.ImageFile;*/
 
 		}
 		

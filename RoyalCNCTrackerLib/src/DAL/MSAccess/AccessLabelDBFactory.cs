@@ -1,6 +1,7 @@
 ﻿using RoyalCNCTrackerLib.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Versioning;
 using System.Text;
@@ -55,21 +56,51 @@ namespace RoyalCNCTrackerLib.DAL.MSAccess {
 
 		public IEnumerable<SinglePart> GetAllSubParts(string jobDbName, string programName) {
 
-			string query = $"SELECT [Filename], [Job Name], [Machining Picture] FROM {jobDbName} WHERE [Pattern Barcode] = {programName}";
+			string query = $"SELECT [Filename], [Job Name], [Machining Picture] FROM [{jobDbName}] WHERE [Pattern Barcode] = \"{programName}\"";
 
 			List<SinglePart> singleParts = new();
 
 			_accessConnection.GetReaderFromDb(query, (reader) => {
 
-				SinglePart part = new SinglePart {
-					GCodeFile = $"{_singlePartGCodePath}\\{reader.GetString(1)}\\{reader.GetString(0)}",
-					ImageFile = $"{_singlePartImagePath}\\{reader.GetString(2)}",
-					IsComplete = false,
-					JobDBName = jobDbName,
-					ProgramName = reader.GetString(0)
-				};
+				if (!reader.HasRows)
+					return;
 
-				singleParts.Add(part);
+				while (reader.Read()) {
+
+					string filename = "";
+					try {
+						filename = reader[0].ToString();
+					} catch (Exception e) { 
+						Debug.WriteLine(e);
+					}
+					
+					string jobname = "";
+					try {
+						jobname = reader[1].ToString();
+					} catch (Exception e) { 
+						Debug.WriteLine(e);
+					}
+
+					string machiningPicture = "";
+					try {
+						machiningPicture = reader[2].ToString();
+					} catch (Exception e) {
+						Debug.WriteLine(e);
+					}
+
+					if (string.IsNullOrEmpty(filename) || string.IsNullOrEmpty(jobname) || string.IsNullOrEmpty(machiningPicture))
+						continue;
+
+					SinglePart part = new SinglePart {
+						GCodeFile = $"{_singlePartGCodePath}\\{jobname}\\{filename}",
+						ImageFile = $"{_singlePartImagePath}\\{machiningPicture}.wmf",
+						IsComplete = false,
+						JobDBName = jobDbName,
+						ProgramName = filename,
+						ParentId = 0
+					};
+					singleParts.Add(part);
+				}
 
 			});
 

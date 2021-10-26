@@ -21,4 +21,8 @@ namespace RoyalCNCTrackerLib.DAL {
 		public int Id { get; set; }
 	}
 
+	public class ChildRepoClass : BaseRepoClass {
+		public int ParentId { get; set; }
+	}
+
 }

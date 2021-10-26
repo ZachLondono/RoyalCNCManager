@@ -10,7 +10,7 @@ namespace RoyalCNCTrackerLib.DAL {
 
 		SinglePart GetSinglePart(string jobDbName, string programName);
 
-		IEnumerable<SinglePart> GetAllSubParts(string jobDbName, string programname);
+		IEnumerable<SinglePart> GetAllSubParts(string jobDbName, string name);
 
 	}
 

@@ -1,16 +1,18 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RoyalCNCTrackerLib.Models {
 
 	public class PatternProgram : CADCodeProgram {
 
-		private IEnumerable<CADCodeProgram> _components = null;
+		private IEnumerable<SinglePart> _components = null;
 
-		public PatternProgram(IEnumerable<CADCodeProgram> components) {
+		public PatternProgram(IEnumerable<SinglePart> components) {
 			_components = components;
 		}
 
-		public override IEnumerable<CADCodeProgram> GetComponents() {
+		public override IEnumerable<SinglePart> GetComponents() {
+			foreach (SinglePart component in _components) component.ParentId = Id;
 			return _components;
 		}
 

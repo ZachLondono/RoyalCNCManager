@@ -8,7 +8,7 @@ namespace RoyalCNCTrackerLib.Models {
 		// </summary>
 		public override IEnumerable<CADCodeProgram> GetComponents() {
 			return null;
-		}	
+		}
 	}
 
 }

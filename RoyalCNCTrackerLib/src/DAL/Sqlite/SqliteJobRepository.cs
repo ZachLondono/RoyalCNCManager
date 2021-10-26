@@ -27,10 +27,10 @@ namespace RoyalCNCTrackerLib.DAL.Sqlite {
 
 			SqliteCommand command = _connection.CreateCommand();
 
-			command.CommandText = $@"INSERT INOT {_jobTableName} 
+			command.CommandText = $@"INSERT INTO {_jobTableName} 
 									({_nameCol}, {_pathCol}, {_dbNameCol}, {_labelPathCol})
 									VALUES (@name, @path, @dbname, @labelpath);
-									SELECET last_inserted_rowid();";
+									SELECT seq FROM sqlite_sequence WHERE name = '{_jobTableName}';";
 
 			command.Parameters.AddWithValue("@name", job.Name);
 			command.Parameters.AddWithValue("@path", job.Path);

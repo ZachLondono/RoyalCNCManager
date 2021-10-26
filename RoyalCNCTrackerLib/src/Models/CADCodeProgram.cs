@@ -5,7 +5,7 @@ namespace RoyalCNCTrackerLib.Models {
 	// <summary>
 	// Model which represents a cadcode program
 	// </summary>
-	public abstract class CADCodeProgram : BaseRepoClass {
+	public abstract class CADCodeProgram : ChildRepoClass {
 
 		public string ProgramName { get; set; }
 
@@ -18,8 +18,10 @@ namespace RoyalCNCTrackerLib.Models {
 		public bool IsComplete { get; set; }
 
 		public abstract IEnumerable<CADCodeProgram> GetComponents();
-
-		public new string ToString => ProgramName;
+		
+		public override string ToString() {
+			return ProgramName;
+		}
 
 	}
 
